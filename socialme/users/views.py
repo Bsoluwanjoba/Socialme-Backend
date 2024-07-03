@@ -51,6 +51,77 @@ class CustomProviderAuthView(ProviderAuthView):
         return response
     
 
+class CustomTokenObtainPairView(TokenObtainPairView):
+    @extend_schema(
+        operation_id='Login with JWT Token',
+        description='This endpoint is used to Login with with JWT Token',
+        summary='This endpoint is used to Login with JWT Token. The Token is stored using http cookies automatically',
+        request= OpenApiTypes.OBJECT,
+        responses={200: UserCreateSerializer},
+    )
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+
+        if response.status_code == 200:
+            access_token = response.data.get('access')
+            refresh_token = response.data.get('refresh')
+
+            response.set_cookie(
+                'access',
+                access_token,
+                max_age=settings.AUTH_COOKIE_MAX_AGE,
+                path=settings.AUTH_COOKIE_PATH,
+                secure=settings.AUTH_COOKIE_SECURE,
+                httponly=settings.AUTH_COOKIE_HTTP_ONLY,
+                samesite=settings.AUTH_COOKIE_SAMESITE
+            )
+
+            response.set_cookie(
+                'refresh',
+                refresh_token,
+                max_age=settings.AUTH_COOKIE_MAX_AGE,
+                path=settings.AUTH_COOKIE_PATH,
+                secure=settings.AUTH_COOKIE_SECURE,
+                httponly=settings.AUTH_COOKIE_HTTP_ONLY,
+                samesite=settings.AUTH_COOKIE_SAMESITE
+            )
+
+        return response
+    
+
+class CustomTokenRefreshView(TokenRefreshView):
+    @extend_schema(
+        operation_id='Refresh JWT Token',
+        description='This endpoint refreshes the JWT Token',
+        summary='This endpoint is used to refresh the JWT Token. The Token is then stored using http cookies automatically',
+        request= OpenApiTypes.OBJECT,
+        responses={200: UserCreateSerializer},
+    )
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.COOKIES.get('refresh')
+
+        if refresh_token:
+            request.data['refresh'] = refresh_token
+
+        response = super().post(request, *args, **kwargs)
+
+        if response.status_code == 200:
+            access_token = response.data.get('access')
+
+            response.set_cookie(
+                'access',
+                access_token,
+                max_age=settings.AUTH_COOKIE_MAX_AGE,
+                path=settings.AUTH_COOKIE_PATH,
+                secure=settings.AUTH_COOKIE_SECURE,
+                httponly=settings.AUTH_COOKIE_HTTP_ONLY,
+                samesite=settings.AUTH_COOKIE_SAMESITE
+            )
+
+        return response
+    
+    
+
 class CustomTokenVerifyView(TokenVerifyView):
     @extend_schema(
         operation_id='Verify JWT Token',
